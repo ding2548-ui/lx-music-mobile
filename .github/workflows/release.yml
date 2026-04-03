@@ -10,10 +10,11 @@ jobs:
   Build_Android:
     name: Build Android (${{ matrix.arch }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       matrix:
         arch: [arm64-v8a, armeabi-v7a]
+      fail-fast: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +23,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -29,20 +31,27 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
       - name: Generate debug keystore
         run: |
-          mkdir -p android/app
-          cd android/app
-          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+          keytool -genkey -v \
+            -keystore android/app/debug.keystore \
+            -alias androiddebugkey \
+            -storepass android \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug, O=Android, C=US"
 
       - name: Build APK
         env:
           DISABLE_SVG: 1
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleRelease \
             -PreactNativeArchitectures=${{ matrix.arch }} \
             -PMYAPP_UPLOAD_STORE_FILE=debug.keystore \
@@ -50,21 +59,34 @@ jobs:
             -PMYAPP_UPLOAD_STORE_PASSWORD=android \
             -PMYAPP_UPLOAD_KEY_PASSWORD=android
 
-      - name: Rename APK
+      - name: Find and rename APK
         run: |
           VERSION=$(node -p "require('./package.json').version")
           ARCH="${{ matrix.arch }}"
-          mv android/app/build/outputs/apk/release/app-arm64-v8a-release.apk android/app/build/outputs/apk/release/lx-music-$VERSION-$ARCH.apk 2>/dev/null || \
-          mv android/app/build/outputs/apk/release/app-armeabi-v7a-release.apk android/app/build/outputs/apk/release/lx-music-$VERSION-$ARCH.apk 2>/dev/null || \
-          cp android/app/build/outputs/apk/release/*.apk android/app/build/outputs/apk/release/lx-music-$VERSION-$ARCH.apk
+          OUTDIR="android/app/build/outputs/apk/release"
+          echo "Searching for APK in $OUTDIR..."
+          ls -la "$OUTDIR" || echo "Directory not found"
+          find "$OUTDIR" -name "*.apk" -type f
+          # Copy the first APK found to a known name
+          APK_FILE=$(find "$OUTDIR" -name "*.apk" -type f | head -1)
+          if [ -n "$APK_FILE" ]; then
+            APK_NAME="lx-music-${VERSION}-${ARCH}.apk"
+            cp "$APK_FILE" "$OUTDIR/$APK_NAME"
+            echo "Renamed to: $APK_NAME"
+            ls -la "$OUTDIR/$APK_NAME"
+          else
+            echo "No APK found!"
+            exit 1
+          fi
 
       - name: Upload to Release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
-        if: matrix.arch == 'arm64-v8a'
         with:
-          tag_name: v$(node -p "require('./package.json').version")
-          name: v$(node -p "require('./package.json').version")
+          tag_name: v$(node -p "require('./package.json').version")-${{ matrix.arch }}
+          name: v$(node -p "require('./package.json').version") (${{ matrix.arch }})
           generate_release_notes: true
           files: android/app/build/outputs/apk/release/lx-music-*.apk
+          make_latest: legacy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
