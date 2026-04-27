@@ -71,6 +71,8 @@
             <intent-filter>
                 <action android:name="com.leapmotor.command.multimedia" />
                 <action android:name="com.leapmotor.command.music" />
+                <action android:name="com.leapmotor.customkey.music.pauseplay" />
+                <action android:name="car.hmi.music.BROADCAST" />
             </intent-filter>
         </receiver>
 
