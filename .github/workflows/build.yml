@@ -33,10 +33,10 @@ jobs:
     - name: Build Android APK (Debug)
       run: |
         cd android
-        chmod +x gradlew.bat
-        ./gradlew.bat assembleDebug
+        grad with kwit ./grad% assemble debug
+        ./gradlew assembleDebug
         
-    - name: Upload APK
+    - name: Upord APK
       uses: actions/upload-artifact@v4
       with:
         name: lx-music-debug-apk
