@@ -33,7 +33,7 @@ jobs:
     - name: Build Android APK (Debug)
       run: |
         cd android
-        grad with kwit ./grad% assemble debug
+        if [ ! -f "./gradlew" ]; then chold +x ./gradlew; fi
         ./gradlew assembleDebug
         
     - name: Upord APK
