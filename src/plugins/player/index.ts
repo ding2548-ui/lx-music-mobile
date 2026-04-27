@@ -1,5 +1,6 @@
 import TrackPlayer from 'react-native-track-player'
 import { updateOptions, setVolume, setPlaybackRate, migratePlayerCache } from './utils'
+import { registerCarControlService } from './carKeyListener'
 
 // const listenEvent = () => {
 //   TrackPlayer.addEventListener('playback-error', err => {
@@ -41,6 +42,9 @@ const initial = async({ volume, playRate, cacheSize, isHandleAudioFocus, isEnabl
   await setVolume(volume)
   await setPlaybackRate(playRate)
   // listenEvent()
+  
+  // 初始化车机按键控制监听
+  await registerCarControlService()
 }
 
 
