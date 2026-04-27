@@ -34,35 +34,35 @@ public class CarKeyReceiver extends BroadcastReceiver {
                 String cmd = intent.getStringExtra("action");
                 if (cmd == null) {
                     // 方向盘物理按键也可能走这个通道
-                    handleWheelKeyEvent(intent);
+                    handleWheelKeyEvent(context, intent);
                     return;
                 }
-                handleCommand(cmd);
+                handleCommand(context, cmd);
                 break;
             }
             case ACTION_MUSIC: {
                 // 音乐命令
                 String cmd = intent.getStringExtra("action");
                 if (cmd != null) {
-                    handleCommand(cmd);
+                    handleCommand(context, cmd);
                 }
                 break;
             }
             case ACTION_WHEEL: {
                 // 方向盘专用通道
-                handleWheelKeyEvent(intent);
+                handleWheelKeyEvent(context, intent);
                 break;
             }
             case ACTION_HMI: {
                 // 中控屏/HMI 命令：也是通过 action 字符串
                 String cmd = intent.getStringExtra("action");
                 if (cmd != null) {
-                    handleCommand(cmd);
+                    handleCommand(context, cmd);
                 } else {
                     // 部分车型 HMI 可能用其他字段
                     cmd = intent.getStringExtra("type");
                     if (cmd != null) {
-                        handleCommand(cmd);
+                        handleCommand(context, cmd);
                     }
                 }
                 break;
@@ -80,19 +80,19 @@ public class CarKeyReceiver extends BroadcastReceiver {
      * - ICU_MediaSwitch=1 → preOne (上一首)
      * - ICU_MediaSwitch=2 → nextOne (下一首)
      */
-    private void handleWheelKeyEvent(Intent intent) {
+    private void handleWheelKeyEvent(Context context, Intent intent) {
         int mediaKey = intent.getIntExtra("ICU_MediaKey", 0);
         int mediaSwitch = intent.getIntExtra("ICU_MediaSwitch", 0);
 
         Log.d(TAG, "Wheel key - ICU_MediaKey: " + mediaKey + ", ICU_MediaSwitch: " + mediaSwitch);
 
         if (mediaKey == 1) {
-            sendCarKeyEvent("playpause");
+            sendCarKeyEvent(context, "playpause");
         }
         if (mediaSwitch == 1) {
-            sendCarKeyEvent("preOne");
+            sendCarKeyEvent(context, "preOne");
         } else if (mediaSwitch == 2) {
-            sendCarKeyEvent("nextOne");
+            sendCarKeyEvent(context, "nextOne");
         }
     }
 
@@ -106,17 +106,20 @@ public class CarKeyReceiver extends BroadcastReceiver {
      * - playpause → 播放/暂停切换
      * - stop → 停止
      */
-    private void handleCommand(String cmd) {
+    private void handleCommand(Context context, String cmd) {
         Log.d(TAG, "Command: " + cmd);
-        sendCarKeyEvent(cmd);
+        sendCarKeyEvent(context, cmd);
     }
 
     /**
      * 发送按键事件到 JS 层
      * JS 层的 carKeyHandler.ts 监听 "CarKeyEvent" 并调用对应的播放控制函数
+     * 
+     * 使用 context.getApplicationContext() 获取 Application 实例，
+     * 而非 MainApplication.getInstance()（该方法不存在）
      */
-    private void sendCarKeyEvent(String command) {
-        MainApplication application = (MainApplication) MainApplication.getInstance();
+    private void sendCarKeyEvent(Context context, String command) {
+        MainApplication application = (MainApplication) context.getApplicationContext();
         if (application == null) {
             Log.e(TAG, "MainApplication is null, cannot send event");
             return;
