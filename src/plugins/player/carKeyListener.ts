@@ -67,7 +67,8 @@ const handleCarKeyEvent = async (keyType: string): Promise<void> => {
  */
 export const registerCarControlService = async (): Promise<void> => {
   // 注册 react-native-track-player 远程控制事件
-   TrackPlayer.addEventListener(TPEvent.RemotePlay, () => {
+  // 这些事件可以通过耳机按钮、汽车方向盘等触发
+  TrackPlayer.addEventListener(TPEvent.RemotePlay, () => {
     console.log('Remote play event received')
     void play()
   })
