@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-import android.view.KeyEvent;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
@@ -15,6 +14,12 @@ import cn.toside.music.mobile.MainApplication;
 public class CarKeyReceiver extends BroadcastReceiver {
     private static final String TAG = "CarKeyReceiver";
 
+    // 车机广播 Action
+    private static final String ACTION_MULTIMEDIA = "com.leapmotor.command.multimedia";
+    private static final String ACTION_MUSIC = "com.leapmotor.command.music";
+    private static final String ACTION_WHEEL = "com.leapmotor.customkey.music.pauseplay";
+    private static final String ACTION_HMI = "car.hmi.music.BROADCAST";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null) return;
@@ -24,25 +29,42 @@ public class CarKeyReceiver extends BroadcastReceiver {
         Log.d(TAG, "Received broadcast action: " + action);
 
         switch (action) {
-            case "com.leapmotor.command.multimedia": {
+            case ACTION_MULTIMEDIA: {
+                // 语音/多媒体命令：带 action 字符串
                 String cmd = intent.getStringExtra("action");
                 if (cmd == null) {
-                    // 方向盘物理按键：ICU_MediaKey / ICU_MediaSwitch
+                    // 方向盘物理按键也可能走这个通道
                     handleWheelKeyEvent(intent);
                     return;
                 }
-                handleVoiceCommand(cmd);
+                handleCommand(cmd);
                 break;
             }
-            case "com.leapmotor.command.music": {
+            case ACTION_MUSIC: {
+                // 音乐命令
                 String cmd = intent.getStringExtra("action");
                 if (cmd != null) {
-                    handleVoiceCommand(cmd);
+                    handleCommand(cmd);
                 }
                 break;
             }
-            case "com.leapmotor.customkey.music.pauseplay": {
-                sendCarKeyEvent("playpause");
+            case ACTION_WHEEL: {
+                // 方向盘专用通道
+                handleWheelKeyEvent(intent);
+                break;
+            }
+            case ACTION_HMI: {
+                // 中控屏/HMI 命令：也是通过 action 字符串
+                String cmd = intent.getStringExtra("action");
+                if (cmd != null) {
+                    handleCommand(cmd);
+                } else {
+                    // 部分车型 HMI 可能用其他字段
+                    cmd = intent.getStringExtra("type");
+                    if (cmd != null) {
+                        handleCommand(cmd);
+                    }
+                }
                 break;
             }
             default:
@@ -52,9 +74,9 @@ public class CarKeyReceiver extends BroadcastReceiver {
     }
 
     /**
-     * 处理方向盘物理按键事件 (ICU_MediaKey / ICU_MediaSwitch)
-     * 参考 MultiMedia.apk CtrlReciver.dispatchWheelEvent 的逻辑：
-     * - ICU_MediaKey=1 → playpause
+     * 处理方向盘物理按键事件
+     * 参考 MultiMedia.apk CtrlReciver.dispatchWheelEvent：
+     * - ICU_MediaKey=1 → playpause (播放/暂停切换)
      * - ICU_MediaSwitch=1 → preOne (上一首)
      * - ICU_MediaSwitch=2 → nextOne (下一首)
      */
@@ -62,7 +84,7 @@ public class CarKeyReceiver extends BroadcastReceiver {
         int mediaKey = intent.getIntExtra("ICU_MediaKey", 0);
         int mediaSwitch = intent.getIntExtra("ICU_MediaSwitch", 0);
 
-        Log.d(TAG, "Wheel key event - ICU_MediaKey: " + mediaKey + ", ICU_MediaSwitch: " + mediaSwitch);
+        Log.d(TAG, "Wheel key - ICU_MediaKey: " + mediaKey + ", ICU_MediaSwitch: " + mediaSwitch);
 
         if (mediaKey == 1) {
             sendCarKeyEvent("playpause");
@@ -75,22 +97,23 @@ public class CarKeyReceiver extends BroadcastReceiver {
     }
 
     /**
-     * 处理语音/仪表盘命令
-     * 参考 MultiMedia.apk CtrlReciver 的逻辑：
+     * 处理命令字符串
+     * 参考 MultiMedia.apk CtrlReciver：
      * - preOne → 上一首
      * - nextOne → 下一首
      * - play → 播放
      * - pause → 暂停
-     * - playpause → 切换播放/暂停
+     * - playpause → 播放/暂停切换
      * - stop → 停止
      */
-    private void handleVoiceCommand(String cmd) {
-        Log.d(TAG, "Voice command: " + cmd);
+    private void handleCommand(String cmd) {
+        Log.d(TAG, "Command: " + cmd);
         sendCarKeyEvent(cmd);
     }
 
     /**
-     * 发送按键事件到 JS 层，由 JS 层的 CarKeyHandler 处理播放控制
+     * 发送按键事件到 JS 层
+     * JS 层的 carKeyHandler.ts 监听 "CarKeyEvent" 并调用对应的播放控制函数
      */
     private void sendCarKeyEvent(String command) {
         MainApplication application = (MainApplication) MainApplication.getInstance();
