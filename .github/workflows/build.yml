@@ -25,17 +25,8 @@ jobs:
         shell: bash
         run: |
           cd android
-          # Check if required secrets are available
-          if [ -z "${{ secrets.KEYSTORE_STORE_FILE_BASE64 }}" ] || [ -z "${{ secrets.KEYSTORE_KEY_ALIAS }}" ] || [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ] || [ -z "${{ secrets.KEYSTORE_KEY_PASSWORD }}" ]; then
-            echo "Warning: Required signing secrets not found. Building debug APK instead of release."
-            echo "This is expected for forks or repositories without signing secrets configured."
-            ./gradlew assembleDebug
-          else
-            echo "Building release APK with provided signing secrets."
-            echo "${{ secrets.KEYSTORE_STORE_FILE_BASE64 }}" | base64 --decode > app/app.keystore
-            ./gradlew assembleRelease -PMYAPP_UPLOAD_STORE_FILE='app.keystore' -PMYAPP_UPLOAD_KEY_ALIAS='${{ secrets.KEYSTORE_KEY_ALIAS }}' -PMYAPP_UPLOAD_STORE_PASSWORD='${{ secrets.KEYSTORE_PASSWORD }}' -PMYAPP_UPLOAD_KEY_PASSWORD='${{ secrets.KEYSTORE_KEY_PASSWORD }}'
-            rm -f app/app.keystore
-          fi
+          # Build Debug APK (no signing required)
+          ./gradlew assembleDebug
 
       # Push tag to GitHub if package.json version's tag is not tagged
       - name: Get package version
@@ -44,8 +35,8 @@ jobs:
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
 
       - name: Generate file MD5
-        run: |
-          cd android/app/build/outputs/apk/release
+        rtn: |
+          cd android/app/build/outputs/apk/debug
           md5sum *.apk
 
       - name: Upload Artifact
