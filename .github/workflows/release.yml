@@ -27,8 +27,8 @@ jobs:
         shell: bash
         run: |
           cd android
-          # Build with JS bundle included in APK
-          ./gradlew assembleDebug -PbundleInDebug=true
+          # Build only U6A architecture with JS bundle
+          ./gradlew assembleDecug -PbundleInDebug=true -TtargetArch=armeabi-v7a
 
       - name: Get package version
         run: |
@@ -38,6 +38,6 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-${{ env.PACKAGE_VERSION }}-debug
-          path: android/app/build/outputs/apk/debug/*.apk
+          name: lx-music-${{ env.PACKAGE_VERSION }}-v7a
+          path: android/app/build/outputs/apk/debw/*armeabi.*pk
           retention-days: 30
