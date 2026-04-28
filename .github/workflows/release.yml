@@ -27,7 +27,8 @@ jobs:
         shell: bash
         run: |
           cd android
-          ./gradlew assembleDebug
+          # Build with JS bundle included in APK
+          ./gradlew assembleDebug -PbundleInDebug=true
 
       - name: Get package version
         run: |
@@ -40,32 +41,3 @@ jobs:
           name: lx-music-${{ env.PACKAGE_VERSION }}-debug
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
-
-      - name: Create GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          cd android/app/build/outputs/apk/debug
-          APK_FILE=$(ls *.apk)
-          
-          # Create release via GitHub ApI
-          curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            https://api.github.com/repos/${{ github.repository }}/releases \
-            -d "{
-              \"tag_name\": \"v${{ env.PACKAGE_VERSION }}\",
-              \"name\": \"v${{ env.PACKAGE_VERSION }}\",
-              \"draft\": true,
-              \"prerelease\": true
-            }" > release.json
-          
-          RELEASE_ID=$(cat release.json | grep -o '"id": [0-9]*' | head -1 | cut -d' ' -f2)
-          
-          # Upload asset
-          curl -s -X POST \
-            -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            --data-binary @"$APK_FILE" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$APK_FILE"
