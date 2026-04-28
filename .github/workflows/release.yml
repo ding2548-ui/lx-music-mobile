@@ -28,9 +28,10 @@ jobs:
         run: |
           cd android
           # Build debug APK with JS bundle
-          ./gradlew assembleDecug -PbundleInDebug=true
+          ./gradlew assembleDebug
+          -PbundleInDebug=true
 
-     - name: Get package version
+      - name: Get package version
         run: |
           Package_Version=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
