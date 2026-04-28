@@ -17,22 +17,17 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Create debug keystore
-        run: }
-          cd android
-          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        run: cd android && keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build Packages
         env:
           DISABLE_SVG: 1
-        shell: bash
         run: |
           cd android
-          ./gradlew assembleDebug -PbundleInDebug=true
+          ./gradlew assembleDebug
 
       - name: Get package version
-        run: |
-          Package_Version=$(node -p "require('./package.json').version")
-          echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
+        run: echo "PACKAGE_VERSION=$(node -p "\require('./package.json').version")" >> $GITHUB_ENV
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
