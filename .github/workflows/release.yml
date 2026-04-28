@@ -40,3 +40,9 @@ jobs:
           name: lx-music-${{ env.PACKAGE_VERSION }}-debug
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+
+      - name: Upload to GitHub Releases
+        run: |
+          npx gh-release@latest create v${{ env.PACKAGE_VERSION }} android/app/build/outputs/apk/debug/*.apk --draft=true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
