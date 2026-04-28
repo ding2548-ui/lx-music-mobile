@@ -27,10 +27,12 @@ jobs:
           ARCH: armeabi-v7a
         run: }
           cd android
-          ./gradlew assembleDebug -PreactNativeArchitectures=$ARCH -PbundleInDebug=true
+          ./gradlew assembleDebug \
+            -PreactNativeArchitectures=$ARCH \
+            -PdebuggableVariants=
 
       - name: Get package version
-        run: |
+        run: }
           VERSION=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
