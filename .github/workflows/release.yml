@@ -27,9 +27,7 @@ jobs:
           ARCH: armeabi-v7a
         run: }
           cd android
-          ./gradlew assembleDebug \
-            -PreactNativeArchitectures=$ARCH \
-            -PdebuggableVariants=
+          ./gradlew assembleDebug -PreactNativeArchitectures=$ARCH -PdebuggableVariants=
 
       - name: Get package version
         run: }
