@@ -21,13 +21,13 @@ jobs:
           cd android
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build V7a APK with JS bundle
+      - name: Build V7a Release APK (includes JS bundle)
         env:
           DISABLE_SVG: 1
           ARCH: armeabi-v7a
         run: |
           cd android
-          ./gradlew assembleDebug -PreactNativeArchitectures=$ARCH -PbundleInDebug=true
+          ./gradlew assembleRelease -PreactNativeArchitectures=$ARCH
 
       - name: Get package version
         run: |
@@ -38,5 +38,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lx-music-${{ env.PACKAGE_VERSION }}-v7a
-          path: android/app/build/outputs/apk/debug/*armeabi*.apk
+          path: android/app/build/outputs/apk/release/*armeabi*.apk
           retention-days: 30
