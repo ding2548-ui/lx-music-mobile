@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - beta
 
 jobs:
   Android:
@@ -21,7 +21,7 @@ jobs:
           cd android
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build V7a Release APK (includes JS bundle)
+      - name: Build V7a APK
         env:
           DISABLE_SVG: 1
           ARCH: armeabi-v7a
