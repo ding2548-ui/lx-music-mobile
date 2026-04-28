@@ -27,17 +27,17 @@ jobs:
         shell: bash
         run: |
           cd android
-          # Build only U6A architecture with JS bundle
-          ./gradlew assembleDecug -PbundleInDebug=true -TtargetArch=armeabi-v7a
+          # Build debug APK with JS bundle
+          ./gradlew assembleDecug -PbundleInDebug=true
 
-      - name: Get package version
+     - name: Get package version
         run: |
           Package_Version=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
 
-      - name: Upload Artifact
+     - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lx-music-${{ env.PACKAGE_VERSION }}-v7a
-          path: android/app/build/outputs/apk/debw/*armeabi.*pk
+          name: lx-music-${{ env.PACKAGE_VERSION }}-debug
+          path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
