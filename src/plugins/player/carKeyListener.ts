@@ -2,7 +2,7 @@ import { NativeModules, NativeEventEmitter, Platform } from 'react-native'
 import TrackPlayer, { Event as TPEvent } from 'react-native-track-player'
 import { play, pause, playNext, playPrev } from '@/core/player/player'
 
-const { CarKeyReceiver: CarKeyReceiverModule } = NativeModules
+const { DeviceEventManagerModule } = NativeModules
 
 let isInitialized = false
 
@@ -11,12 +11,12 @@ let isInitialized = false
  * 在应用启动时调用
  */
 export const initCarKeyListener = async(): Promise<void> => {
-  if (isInitialized || Platform.OS !== 'android' || !CarKeyReceiverModule) {
+  if (isInitialized || Platform.OS !== 'android') {
     return
   }
 
   try {
-    const eventEmitter = new NativeEventEmitter(CarKeyReceiverModule)
+    const eventEmitter = new NativeEventEmitter(DeviceEventManagerModule)
 
     // 监听车机按键事件
     eventEmitter.addListener('CarKeyEvent', (event: { keyType: string; event: string }) => {
