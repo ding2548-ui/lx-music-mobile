@@ -7,6 +7,8 @@ import { isTempId, isEmpty } from './utils'
 import { exitApp } from '@/core/common'
 import { getCurrentTrackId } from './playList'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
+//车机按键监听
+import { initCarKeyListener } from './carKeyListener'
 
 let isInitialized = false
 
@@ -202,6 +204,8 @@ const registerPlaybackService = async() => {
   //   console.log('playback-destroy')
   //   store.dispatch(playerAction.destroy())
   // })
+  // 初始化车机按键监听
+  await initCarKeyListener()
   isInitialized = true
 }
 
