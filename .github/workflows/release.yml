@@ -17,20 +17,22 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Create debug keystore
-        run: cd android && keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        run: }
+          cd android
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Build V7a APK with JS bundle
         env:
           DISABLE_SVG: 1
           ARCH: armeabi-v7a
-        run: |
+        run: }
           cd android
-          ./gradlew assembleDebug \
-            -PreactNativeArchitectures=$ARCH \
-            -PbundleInDebug=true
+          ./gradlew assembleDebug -PreactNativeArchitectures=$ARCH -PbundleInDebug=true
 
       - name: Get package version
-        run: echo "PACKAGE_VERSION=$(node -p \"require('./package.json').version\")" >> $GITHUB_ENV
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
