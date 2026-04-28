@@ -35,13 +35,23 @@ jobs:
         run: |
           Package_Version=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
+          echo "APK_NAME=lx-music-mobile-v${Package_Version}-debug.apk" >> $GITHUB_ENV
+
+      - name: Rename APK
+        run: |
+          cd android/app/build/outputs/apk/debug
+          mv *.apk ${{ env.APK_NAME }}
 
       - name: Generate file MD5
         run: |
           cd android/app/build/outputs/apk/debug
-          md5sum *.apk
+          md5sum ${{ env.APK_NAME }}
 
-      - name: Upload Artifact
-        uses: ./.github/actions/upload-artifact
+      - name: Upload to Releases
+        uses: softprops/action-gh-release@v1
+        with:
+          files: android/app/build/outputs/apk/debug/${{ env.APK_NAME }}
+          generate_release_notes: true
+          tag_name: ${{ env.PACKAGE_VERSION }}
         env:
-          Package_Version: ${{ env.PACKAGE_VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
