@@ -66,15 +66,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Car Key Receiver -->
-        <receiver android:name=".CarKeyReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="com.leapmotor.command.multimedia" />
-                <action android:name="com.leapmotor.command.music" />
-                <action android:name="com.leapmotor.customkey.music.pauseplay" />
-                <action android:name="car.hmi.music.BROADCAST" />
-            </intent-filter>
-        </receiver>
+        <!-- 杞︽満鎸夐敭骞挎挱鎺ユ敹鍣紙鍔ㄦ€佹敞鍐岋紝鐢盋arKeyReceiverModule绠＄悊锛?-->
 
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.provider" android:exported="false" android:grantUriPermissions="true">
             <meta-data tools:replace="android:resource" android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
