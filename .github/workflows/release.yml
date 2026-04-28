@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Check out git repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Env
         uses: ./.github/actions/setup
@@ -19,16 +21,14 @@ jobs:
       - name: Create debug keystore
         run: |
           cd android
-          # Create debug keystore for debug build
           keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Build Packages
+     - name: Build Packages
         env:
-          DISABLE_SVG: 1
+           DISABLE_SVG: 1
         shell: bash
         run: |
           cd android
-          # Build Debug APK
           ./gradlew assembleDebug
 
       - name: Get package version
@@ -36,15 +36,27 @@ jobs:
           Package_Version=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
 
-      - name: List APK files
+      - name: Create Git Tag
         run: |
-          ls -la android/app/build/outputs/apk/debug/
+          git tag v${{ env.PACKAGE_VERSION }}
+
+      - name: Push Tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.git.createTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag: 'v${{ env.PACKAGE_VERSION }}',
+              message: 'Release v${{ env.PACKAGE_VERSION }}',
+              object: '${{ github.sha }}',
+              type: 'commit'
+            })
 
       - name: Upload to Releases
         uses: softprops/action-gh-release@v1
         with:
           files: android/app/build/outputs/apk/debug/*.apk
           generate_release_notes: true
-          tag_name: v${{ env.PACKAGE_VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
