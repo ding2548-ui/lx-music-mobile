@@ -34,8 +34,9 @@ jobs:
           Package_Version=$(node -p "require('./package.json').version")
           echo "PACKAGE_VERSION=$Package_Version" >> $GITHUB_ENV
 
-      - name: Upload to GitHub Releases
-        run: |
-          npx gh-release@latest create v${{ env.PACKAGE_VERSION }} android/app/build/outputs/apk/debug/*.apk --draft=true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lx-music-${{ env.PACKAGE_VERSION }}-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
