@@ -50,23 +50,32 @@
                 <data android:mimeType="text/javascript"/>
                 <data android:mimeType="application/x-javascript"/>
                 <data android:mimeType="application/javascript"/>
-                <data android:pathPattern=".*\\.js" />
-                <data android:pathPattern=".*\\..*\\.js" />
-                <data android:pathPattern=".*\\..*\\..*\\.js" />
+                <data android:pathPattern=".*\.js" />
+                <data android:pathPattern=".*\..*\..js" />
+                <data android:pathPattern=".*\..*\..*\..js" />
                 <data android:pathSuffix=".js" tools:targetApi="s" />
                 <data android:mimeType="application/json"/>
-                <data android:pathPattern=".*\\.json" />
-                <data android:pathPattern=".*\\..*\\.json" />
-                <data android:pathPattern=".*\\..*\\..*\\.json" />
+                <data android:pathPattern=".*\.json" />
+                <data android:pathPattern=".*\..*\..json" />
+                <data android:pathPattern=".*\..*\..*\..json" />
                 <data android:pathSuffix=".json" tools:targetApi="s" />
-                <data android:pathPattern=".*\\.lxmc" />
-                <data android:pathPattern=".*\\..*\\.lxmc" />
-                <data android:pathPattern=".*\\..*\\..*\\.lxmc" />
+                <data android:pathPattern=".*\.lxmc" />
+                <data android:pathPattern=".*\..*\..lxmc" />
+                <data android:pathPattern=".*\..*\..*\..lxmc" />
                 <data android:pathSuffix=".lxmc" tools:targetApi="s" />
             </intent-filter>
         </activity>
 
-        <!-- 杞︽満鎸夐敭骞挎挱鎺ユ敹鍣紙鍔ㄦ€佹敞鍐岋紝鐢盋arKeyReceiverModule绠＄悊锛?-->
+        <!-- 车机按键静态广播接收器（对照 MultiMedia StaticReciver，priority=1000）
+             确保即使 ReactContext 不活跃也能收到车机广播
+             动态接收器由 CarKeyReceiverModule 用 Application context 注册 -->
+        <receiver android:name=".CarKeyReceiver" android:exported="true">
+            <intent-filter android:priority="1000">
+                <action android:name="com.leapmotor.command.multimedia"/>
+                <action android:name="com.leapmotor.command.music"/>
+                <action android:name="com.leapmotor.customkey.music.pauseplay"/>
+            </intent-filter>
+        </receiver>
 
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.provider" android:exported="false" android:grantUriPermissions="true">
             <meta-data tools:replace="android:resource" android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />

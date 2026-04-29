@@ -14,34 +14,45 @@ import com.facebook.react.modules.core.DeviceEventManagerModule;
 import javax.annotation.Nullable;
 
 /**
- * 杞︽満鎸夐敭 Native Module
- * 瀵圭収闆惰窇 MultiMedia 鍘熺増 CtrlReciver 瀹炵幇锛屾敮鎸佷笁绉嶅箍鎾暟鎹牸寮忥細
- * - com.leapmotor.command.multimedia: type(string) 鈫?璇煶/ launcher 鎺у埗
- * - com.leapmotor.command.music: type(string) 鈫?璇煶鎼滅储闊充箰
- * - com.leapmotor.customkey.music.pauseplay: ICU_MediaKey(int) + ICU_MediaSwitch(int) 鈫?鏂瑰悜鐩樻寜閿?
+ * 车机按键 Native Module（对照 MultiMedia CtrlReciver + KGMusicBrowserService）
+ * 
+ * 支持三种广播数据格式：
+ * - com.leapmotor.command.multimedia: type(string) + state(int) → 语音/launcher 播放控制
+ * - com.leapmotor.command.music: type(string) → 语音搜索（仅处理播放控制类 type）
+ * - com.leapmotor.customkey.music.pauseplay: ICU_MediaKey(int) + ICU_MediaSwitch(int) → 方向盘按键
+ * 
+ * 关键改进（对照 MultiMedia 差异修复）：
+ * 1. 使用 Application context 注册 BroadcastReceiver（非 ReactContext），确保 ReactContext 销毁后仍可接收广播
+ * 2. 添加静态 sendEvent 方法，供静态 CarKeyReceiver 直接调用
+ * 3. 正确映射方向盘按键：com.leapmotor.customkey.music.pauseplay → dispatchWheelEvent（之前误用 command.music）
  */
 public class CarKeyReceiverModule extends ReactContextBaseJavaModule {
     private static final String TAG = "CarKeyReceiverModule";
     private static final String MODULE_NAME = "CarKeyReceiver";
 
-    // 骞挎挱 Action锛堝鐓?MultiMedia CtrlReciver锛?
+    // 广播 Action（对照 MultiMedia CtrlReciver IntentFilter）
     private static final String ACTION_MULTIMEDIA = "com.leapmotor.command.multimedia";
     private static final String ACTION_MUSIC = "com.leapmotor.command.music";
     private static final String ACTION_CUSTOMKEY = "com.leapmotor.customkey.music.pauseplay";
 
-    // type 瀛楁鍛戒护锛堣闊?launcher 鎺у埗锛?
+    // type 字段指令
     private static final String TYPE_PLAY = "play";
     private static final String TYPE_PAUSE = "pause";
     private static final String TYPE_PLAYPAUSE = "playpause";
     private static final String TYPE_NEXT = "nextOne";
     private static final String TYPE_PREV = "preOne";
 
+    // 静态引用 ReactContext，供静态 CarKeyReceiver 调用
+    private static ReactApplicationContext staticReactContext = null;
+    private static BroadcastReceiver dynamicReceiver = null;
+    private static boolean isReceiverRegistered = false;
+
     private ReactApplicationContext reactContext;
-    private BroadcastReceiver broadcastReceiver;
 
     public CarKeyReceiverModule(ReactApplicationContext reactContext) {
         super(reactContext);
         this.reactContext = reactContext;
+        staticReactContext = reactContext;
         registerBroadcastReceiver();
     }
 
@@ -51,32 +62,37 @@ public class CarKeyReceiverModule extends ReactContextBaseJavaModule {
     }
 
     /**
-     * 娉ㄥ唽骞挎挱鎺ユ敹鍣紝鐩戝惉涓変釜杞︽満鎺у埗骞挎挱
-     * 瀵圭収 MultiMedia CtrlReciver 鐨?IntentFilter 娉ㄥ唽
+     * 注册动态广播接收器，使用 Application context（非 ReactContext）
+     * 对照 MultiMedia KGMusicBrowserService.onCreate() 中 registerReceiver
+     * 
+     * 关键差异修复：MultiMedia 在 MediaBrowserService 中注册 receiver（Service 生命周期独立于 Activity）
+     * React Native 没有 MediaBrowserService，但 Application context 同样独立于 Activity 生命周期
+     * 所以用 getApplicationContext() 注册 receiver，确保 ReactContext 销毁后仍能接收广播
      */
     private void registerBroadcastReceiver() {
-        if (broadcastReceiver != null) return;
+        if (isReceiverRegistered) return;
 
-        broadcastReceiver = new BroadcastReceiver() {
+        dynamicReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if (intent == null) return;
 
                 String action = intent.getAction();
-                Log.i(TAG, "Received action: " + action);
+                Log.i(TAG, "DynamicReceiver onReceive: " + action);
 
                 if (action == null) return;
 
                 String keyType = null;
 
                 if (ACTION_CUSTOMKEY.equals(action)) {
-                    // 鏂瑰悜鐩樻寜閿細璇诲彇 ICU_MediaKey(int) + ICU_MediaSwitch(int)
+                    // 🎯 方向盘按键：ICU_MediaKey + ICU_MediaSwitch
                     keyType = parseWheelKeyEvent(intent);
                 } else if (ACTION_MULTIMEDIA.equals(action) || ACTION_MUSIC.equals(action)) {
-                    // 璇煶/launcher 鎺у埗锛氳鍙?type(string)
-                    keyType = intent.getStringExtra("type");
-                    if (keyType != null) {
-                        Log.i(TAG, "Voice/Launcher key: " + keyType);
+                    // 语音/launcher 控制：读取 type 字段（仅处理播放控制类）
+                    String type = intent.getStringExtra("type");
+                    if (type != null && isPlaybackControlType(type)) {
+                        keyType = type;
+                        Log.i(TAG, "Voice/Launcher playback control: type=" + type);
                     }
                 }
 
@@ -91,21 +107,25 @@ public class CarKeyReceiverModule extends ReactContextBaseJavaModule {
         filter.addAction(ACTION_MULTIMEDIA);
         filter.addAction(ACTION_MUSIC);
         filter.addAction(ACTION_CUSTOMKEY);
-        filter.setPriority(1000);
+        filter.setPriority(1000); // 对照 MultiMedia CtrlReciver priority=1000
 
         try {
-            reactContext.registerReceiver(broadcastReceiver, filter);
-            Log.i(TAG, "BroadcastReceiver registered for 3 actions (priority=1000)");
+            // 关键修复：使用 Application context 注册，而非 ReactContext
+            // ReactContext 可能被销毁导致 receiver 自动解除注册
+            // Application context 在整个 App 进程生命周期内保持有效
+            reactContext.getApplicationContext().registerReceiver(dynamicReceiver, filter);
+            isReceiverRegistered = true;
+            Log.i(TAG, "DynamicReceiver registered with Application context (priority=1000)");
         } catch (Exception e) {
-            Log.e(TAG, "Failed to register BroadcastReceiver: " + e.getMessage());
+            Log.e(TAG, "Failed to register DynamicReceiver: " + e.getMessage());
         }
     }
 
     /**
-     * 瑙ｆ瀽鏂瑰悜鐩樻寜閿簨浠?
-     * 瀵圭収 MultiMedia CtrlReciver.dispatchWheelEvent 瀹炵幇
-     * ICU_MediaKey: 1 鈫?playpause锛堟挱鏀?鏆傚仠鍒囨崲锛?
-     * ICU_MediaSwitch: 1 鈫?preOne锛堜笂涓€鏇诧級锛? 鈫?nextOne锛堜笅涓€鏇诧級
+     * 解析方向盘按键事件
+     * 对照 MultiMedia CtrlReciver.dispatchWheelEvent 实现
+     * ICU_MediaKey: 1 → playpause（播放/暂停切换）
+     * ICU_MediaSwitch: 1 → preOne（上一曲），2 → nextOne（下一曲）
      */
     private String parseWheelKeyEvent(Intent intent) {
         int mediaKey = intent.getIntExtra("ICU_MediaKey", 0);
@@ -113,21 +133,18 @@ public class CarKeyReceiverModule extends ReactContextBaseJavaModule {
 
         Log.i(TAG, "Wheel event: ICU_MediaKey=" + mediaKey + ", ICU_MediaSwitch=" + mediaSwitch);
 
-        // 濡傛灉閮戒负0锛屽拷鐣ワ紙瀵圭収 dispatchWheelEvent: if-nez v1, :cond_0 + if-nez p1, :cond_0 鈫?return锛?
         if (mediaKey == 0 && mediaSwitch == 0) return null;
 
-        // 瀵圭収 dispatchWheelEvent 鐨勯€昏緫锛?
-        // ICU_MediaKey=1 鈫?"playpause"
+        // 对照 dispatchWheelEvent：ICU_MediaKey=1 → "playpause"（优先判断）
         if (mediaKey == 1) {
             return TYPE_PLAYPAUSE;
         }
 
-        // ICU_MediaSwitch=1 鈫?"preOne"锛堜笂涓€鏇诧級
+        // ICU_MediaSwitch=1 → "preOne"，2 → "nextOne"
         if (mediaSwitch == 1) {
             return TYPE_PREV;
         }
 
-        // ICU_MediaSwitch=2 鈫?"nextOne"锛堜笅涓€鏇诧級
         if (mediaSwitch == 2) {
             return TYPE_NEXT;
         }
@@ -137,33 +154,63 @@ public class CarKeyReceiverModule extends ReactContextBaseJavaModule {
     }
 
     /**
-     * 鍙戦€佷簨浠跺埌 JS 灞?
+     * 判断 type 是否为播放控制指令
+     */
+    private boolean isPlaybackControlType(String type) {
+        return TYPE_PLAY.equals(type)
+            || TYPE_PAUSE.equals(type)
+            || TYPE_PLAYPAUSE.equals(type)
+            || TYPE_NEXT.equals(type)
+            || TYPE_PREV.equals(type);
+    }
+
+    /**
+     * 发送事件到 JS 层
      */
     private void sendEvent(String keyType) {
         if (reactContext == null || !reactContext.hasActiveCatalystInstance()) {
-            Log.w(TAG, "ReactContext not active, cannot send event");
+            Log.w(TAG, "ReactContext not active, cannot send event via instance");
             return;
         }
 
         WritableMap params = Arguments.createMap();
         params.putString("keyType", keyType);
 
-        reactContext
-            .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
-            .emit("CarKeyEvent", params);
-
+        reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit("CarKeyEvent", params);
         Log.i(TAG, "Event sent to JS: CarKeyEvent, keyType=" + keyType);
     }
 
-    @Override
-    public void onCatalystInstanceDestroy() {
-        if (broadcastReceiver != null) {
-            try {
-                reactContext.unregisterReceiver(broadcastReceiver);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to unregister BroadcastReceiver: " + e.getMessage());
-            }
-            broadcastReceiver = null;
+    /**
+     * 静态方法：供静态 CarKeyReceiver 调用
+     * 当 ReactContext 活跃时直接发送事件到 JS 层
+     * 返回 true 表示事件已成功发送到 JS
+     */
+    public static boolean sendEventStatic(String keyType) {
+        if (staticReactContext != null && staticReactContext.hasActiveCatalystInstance()) {
+            WritableMap params = Arguments.createMap();
+            params.putString("keyType", keyType);
+
+            staticReactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                              .emit("CarKeyEvent", params);
+            Log.i(TAG, "Static sendEvent: CarKeyEvent, keyType=" + keyType);
+            return true;
         }
+
+        Log.w(TAG, "Static sendEvent: ReactContext not active for keyType=" + keyType);
+        return false;
+    }
+
+    /**
+     * React Native NativeEventEmitter 需要的方法
+     */
+    @ReactMethod
+    public void addListener(String eventName) {
+        // Required for NativeEventEmitter
+    }
+
+    @ReactMethod
+    public void removeListeners(Integer count) {
+        // Required for NativeEventEmitter
     }
 }
