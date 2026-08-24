@@ -12,7 +12,7 @@ const handleExitApp = async(reason: string) => {
   exitApp(reason)
 }
 
-const registerPlaybackService = () => {
+const registerPlaybackService = async() => {
   if (isInitialized) return
 
   console.log('reg services...')
@@ -118,6 +118,6 @@ const registerPlaybackService = () => {
 export default () => {
   if (global.lx.playerStatus.isRegisteredService) return
   console.log('handle registerPlaybackService...')
-  TrackPlayer.registerPlaybackService(registerPlaybackService)
+  TrackPlayer.registerPlaybackService(() => registerPlaybackService())
   global.lx.playerStatus.isRegisteredService = true
 }
