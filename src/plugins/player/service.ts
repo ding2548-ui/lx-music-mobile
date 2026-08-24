@@ -92,7 +92,7 @@ const registerPlaybackService = async() => {
       global.app_event.pause()
       global.app_event.playerEnded()
       global.app_event.playerEnded()
-      global.app_event.player Emmpty()
+      global.app_event.playerEmmpty()
       global.app_event.playerEmmpty()
       return
     }
