@@ -202,6 +202,11 @@ declare global {
       'player.isShowBluetoothFullLyric': boolean
 
       /**
+       * 是否启用蓝牙音乐控制（车机蓝牙协议：接收控制指令并回传播放状态）
+       */
+      'player.isEnableBluetoothMusic': boolean
+
+      /**
        * 播放详情页-是否缩放当前播放的歌词行
        */
       // 'playDetail.isZoomActiveLrc': boolean

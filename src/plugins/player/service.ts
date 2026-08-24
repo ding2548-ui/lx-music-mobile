@@ -4,8 +4,6 @@ import { isTempId, isEmpty } from './utils'
 import { exitApp } from '@/core/common'
 import { getCurrentTrackId } from './playList'
 import { pause, play, playNext, playPrev } from '@/core/player/player'
-//车机按键监听
-import { initCarKeyListener } from './carKeyListener'
 
 let isInitialized = false
 
@@ -14,7 +12,7 @@ const handleExitApp = async(reason: string) => {
   exitApp(reason)
 }
 
-const registerPlaybackService = async() => {
+const registerPlaybackService = () => {
   if (isInitialized) return
 
   console.log('reg services...')
@@ -115,14 +113,11 @@ const registerPlaybackService = async() => {
   })
 
   isInitialized = true
-
-  //车机按键监听初始化
-  await initCarKeyListener()
 }
 
 export default () => {
   if (global.lx.playerStatus.isRegisteredService) return
   console.log('handle registerPlaybackService...')
-  TrackPlayer.registerPlaybackService(() => registerPlaybackService())
+  TrackPlayer.registerPlaybackService(registerPlaybackService)
   global.lx.playerStatus.isRegisteredService = true
 }

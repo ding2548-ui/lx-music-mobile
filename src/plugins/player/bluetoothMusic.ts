@@ -1,6 +1,7 @@
 import { NativeModules, NativeEventEmitter, Platform } from 'react-native'
 import TrackPlayer, { State, Event } from 'react-native-track-player'
 import { playNext, playPrev } from '@/core/player/player'
+import settingState from '@/store/setting/state'
 
 const { BluetoothMusicModule } = NativeModules
 
@@ -33,11 +34,13 @@ export const initBluetoothMusic = async (): Promise<void> => {
 
     // 车机 -> App：蓝牙下发的控制指令
     eventEmitter.addListener('BluetoothMusicEvent', (event: { ctrl?: string; connection?: boolean; carPlaying?: boolean }) => {
+      if (!settingState.setting['player.isEnableBluetoothMusic']) return
       void handleBluetoothEvent(event)
     })
 
     // App 播放状态变化 -> 回传车机蓝牙面板
     TrackPlayer.addEventListener(Event.PlaybackState, (data) => {
+      if (!settingState.setting['player.isEnableBluetoothMusic']) return
       const playState = data.state === State.Playing
         ? BLUETOOTH_PLAY_STATE.PLAYING
         : BLUETOOTH_PLAY_STATE.PAUSED
@@ -46,6 +49,7 @@ export const initBluetoothMusic = async (): Promise<void> => {
 
     // 切歌 -> 回传当前为播放状态
     TrackPlayer.addEventListener(Event.PlaybackTrackChanged, () => {
+      if (!settingState.setting['player.isEnableBluetoothMusic']) return
       BluetoothMusicModule.sendBluetoothState(BLUETOOTH_PLAY_STATE.PLAYING)
     })
 
