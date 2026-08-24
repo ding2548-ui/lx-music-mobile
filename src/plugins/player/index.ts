@@ -1,6 +1,7 @@
 import TrackPlayer from 'react-native-track-player'
 import { updateOptions, setVolume, setPlaybackRate, migratePlayerCache } from './utils'
 import { registerCarControlService } from './carKeyListener'
+import { initBluetoothMusic } from './bluetoothMusic'
 
 // const listenEvent = () => {
 //   TrackPlayer.addEventListener('playback-error', err => {
@@ -45,6 +46,8 @@ const initial = async({ volume, playRate, cacheSize, isHandleAudioFocus, isEnabl
   
   // 初始化车机按键控制监听
   await registerCarControlService()
+  // 初始化车机蓝牙音乐协议（状态回传 + 接收蓝牙控制指令）
+  await initBluetoothMusic()
 }
 
 

@@ -52,6 +52,9 @@ const handleCarKeyEvent = async (keyType: string): Promise<void> => {
       case 'preOne':
         await TrackPlayer.skipToPrevious()
         break
+      case 'stop':
+        await TrackPlayer.reset()
+        break
       default:
         console.log('Unknown car key type:', keyType)
         break

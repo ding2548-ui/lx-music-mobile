@@ -66,11 +66,15 @@
             </intent-filter>
         </activity>
 
-        <!-- Car Key Receiver -->
+        <!-- Car Key Receiver（方控：方向盘媒体按键） -->
         <receiver android:name=".CarKeyReceiver" android:exported="true">
-            <intent-filter>
+            <intent-filter android:priority="1000">
                 <action android:name="com.leapmotor.command.multimedia" />
                 <action android:name="com.leapmotor.command.music" />
+                <action android:name="car.meter.music.BROADCAST" />
+                <action android:name="car.hmi.music.BROADCAST" />
+                <action android:name="com.leapmotor.customkey.music.pauseplay" />
+                <action android:name="com.leapmotor.ICU2MMICtrl" />
             </intent-filter>
         </receiver>
 
